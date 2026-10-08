@@ -1,0 +1,6 @@
+{
+  "name": "VisionTrack AI - Real-Time Object Detection & Tracking",
+  "description": "Real-time computer vision system that detects, understands, and tracks objects across live camera feeds and uploaded videos.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
