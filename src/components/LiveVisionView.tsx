@@ -417,33 +417,44 @@ export const LiveVisionView: React.FC<LiveVisionViewProps> = ({
     }
 
     try {
+      // Determine optimal snapshot dimensions (max 960px to keep size under 60KB while crisp)
+      const maxDim = 960;
+      const srcW = canvas.width || 640;
+      const srcH = canvas.height || 480;
+      const scale = Math.min(1, maxDim / Math.max(srcW, srcH));
+      const targetW = Math.max(320, Math.round(srcW * scale));
+      const targetH = Math.max(240, Math.round(srcH * scale));
+
       // Create offscreen canvas combining video frame + overlay annotations
       const captureCanvas = document.createElement('canvas');
-      captureCanvas.width = canvas.width;
-      captureCanvas.height = canvas.height;
+      captureCanvas.width = targetW;
+      captureCanvas.height = targetH;
       const ctx = captureCanvas.getContext('2d');
 
       if (!ctx) {
         throw new Error('Canvas context unavailable');
       }
 
-      // Draw current video frame
-      ctx.drawImage(video, 0, 0, captureCanvas.width, captureCanvas.height);
-      // Draw detection overlays on top
-      ctx.drawImage(canvas, 0, 0);
+      // Draw current video frame and detection overlays onto scaled canvas
+      ctx.drawImage(video, 0, 0, targetW, targetH);
+      ctx.drawImage(canvas, 0, 0, targetW, targetH);
 
       // Watermark with VisionTrack branding & timestamp
       ctx.save();
-      ctx.font = 'bold 14px Inter, system-ui, sans-serif';
+      ctx.font = 'bold 12px Inter, system-ui, sans-serif';
       ctx.fillStyle = 'rgba(7, 17, 31, 0.85)';
       const brandText = 'VISIONTRACK AI • Captured Frame';
       const m = ctx.measureText(brandText);
-      ctx.fillRect(16, 16, m.width + 24, 30);
+      ctx.fillRect(12, 12, m.width + 20, 26);
       ctx.fillStyle = '#00f0ff';
-      ctx.fillText(brandText, 28, 36);
+      ctx.fillText(brandText, 22, 29);
       ctx.restore();
 
-      const imageSrc = captureCanvas.toDataURL('image/png', 0.92);
+      // Export as high-quality compressed JPEG (~40-60KB instead of 3-5MB PNG)
+      let imageSrc = captureCanvas.toDataURL('image/jpeg', 0.82);
+      if (!imageSrc || imageSrc.length < 50) {
+        imageSrc = captureCanvas.toDataURL('image/png');
+      }
 
       // Compute stats
       const totalObjects = trackedObjects.length;

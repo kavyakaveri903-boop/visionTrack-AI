@@ -6,6 +6,7 @@ import { DetectionHistoryView } from './components/DetectionHistoryView';
 import { ToastContainer, ToastMessage } from './components/Toast';
 import { DetectionSnapshot } from './types/vision';
 import {
+  initStorage,
   getSnapshots,
   saveSnapshot,
   deleteSnapshot,
@@ -31,6 +32,19 @@ export default function App() {
 
   // Detection history state
   const [snapshots, setSnapshots] = useState<DetectionSnapshot[]>(() => getSnapshots());
+
+  // Initialize async IndexedDB storage on mount
+  useEffect(() => {
+    initStorage()
+      .then((items) => {
+        if (items && items.length > 0) {
+          setSnapshots(items);
+        }
+      })
+      .catch((err) => {
+        console.warn('Storage initialization fallback:', err);
+      });
+  }, []);
 
   // Toasts
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
@@ -74,22 +88,34 @@ export default function App() {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
-  const handleCaptureSnapshot = (snapshot: DetectionSnapshot) => {
-    saveSnapshot(snapshot);
-    setSnapshots(getSnapshots());
+  const handleCaptureSnapshot = async (snapshot: DetectionSnapshot) => {
+    try {
+      await saveSnapshot(snapshot);
+      setSnapshots(getSnapshots());
+    } catch (err) {
+      console.error('Error saving snapshot:', err);
+    }
   };
 
-  const handleDeleteSnapshot = (id: string) => {
-    deleteSnapshot(id);
-    setSnapshots(getSnapshots());
-    showToast('Snapshot removed from history.', 'info');
+  const handleDeleteSnapshot = async (id: string) => {
+    try {
+      await deleteSnapshot(id);
+      setSnapshots(getSnapshots());
+      showToast('Snapshot removed from history.', 'info');
+    } catch (err) {
+      console.error('Error deleting snapshot:', err);
+    }
   };
 
-  const handleClearAllSnapshots = () => {
+  const handleClearAllSnapshots = async () => {
     if (window.confirm('Are you sure you want to clear all saved detection snapshots?')) {
-      clearSnapshots();
-      setSnapshots([]);
-      showToast('All detection history cleared.', 'info');
+      try {
+        await clearSnapshots();
+        setSnapshots([]);
+        showToast('All detection history cleared.', 'info');
+      } catch (err) {
+        console.error('Error clearing snapshots:', err);
+      }
     }
   };
 
